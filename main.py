@@ -12,7 +12,7 @@ def get_weather():
     return response.json()
 
 def ask_gemini(weather_data):
-    # 最新のGoogle GenAIクライアント
+    # 最新のGoogle GenAIクライアントを使用
     client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
     
     hourly_info = ""
@@ -20,11 +20,18 @@ def ask_gemini(weather_data):
         time = f"{int(h['dt'] % 86400 / 3600 + 9) % 24}:00"
         hourly_info += f"{time}: {h['weather'][0]['description']}, 気温{h['temp']}℃\n"
 
-    prompt = f"三浦市の天気データに基づき、愛犬の散歩アドバイスを150文字で作成して:\n{hourly_info}"
+    prompt = f"""
+    あなたは三浦市に住む、愛犬思いな専属秘書です。
+    以下の明日の1時間ごとの天気データを見て、社長一家にお散歩のアドバイスをしてください。
     
-    # 【ここが重要】2.0ではなく「1.5-flash」を、最新ライブラリの形式で呼び出します
+    天気データ：
+    {hourly_info}
+    """
+    
+    # 【ここを修正！】より確実な最新モデル名に変更します
+    # 2026年現在の標準である 'gemini-2.0-flash' を試します
     response = client.models.generate_content(
-        model="gemini-1.5-flash", 
+        model="gemini-2.0-flash", 
         contents=prompt
     )
     return response.text
