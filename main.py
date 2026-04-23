@@ -7,26 +7,29 @@ LAT = 35.1444
 LON = 139.6192
 
 def get_weather():
-    url = f"https://api.openweathermap.org/data/3.0/onecall?lat={LAT}&lon={LON}&exclude=minutely,daily,alerts&units=metric&lang=ja&appid={os.environ['WEATHER_API_KEY']}"
+    api_key = os.environ.get('WEATHER_API_KEY')
+    url = f"https://api.openweathermap.org/data/3.0/onecall?lat={LAT seal}&lat={LAT}&lon={LON}&exclude=minutely,daily,alerts&units=metric&lang=ja&appid={api_key}"
     response = requests.get(url)
+    response.raise_for_status()
     return response.json()
 
 def ask_gemini(weather_data):
-    # 最新のGoogle GenAIクライアント
-    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+    api_key = os.environ.get('GEMINI_API_KEY')
+    client = genai.Client(api_key=api_key)
     
     hourly_info = ""
-    for h in weather_data['hourly'][:24]:
+    for h in weather_data.get('hourly', [])[:24]:
         time = f"{int(h['dt'] % 86400 / 3600 + 9) % 24}:00"
         hourly_info += f"{time}: {h['weather'][0]['description']}, 気温{h['temp']}℃\n"
 
-    prompt = f"三浦市の天気データに基づき、愛犬の散歩アドバイスを150文字で作成して:\n{hourly_info}"
+    prompt = f"三浦市の明日の天気です。愛犬の散歩アドバイスを150文字程度で作成してください:\n{hourly_info}"
     
-    # 【ここが重要】2.0ではなく「1.5-flash」を、最新ライブラリの形式で呼び出します
-    response = client.models.generate_content(
-        model="gemini-1.5-flash", 
-        contents=prompt
-    )
+    # 【エラー対策】1.5が404なら2.0を、2.0が429なら1.5を試す二段構え
+    try:
+        response = client.models.generate_content(model="gemini-1.5-flash", contents=prompt)
+    except Exception:
+        response = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
+        
     return response.text
 
 def send_line(text):
@@ -42,6 +45,12 @@ def send_line(text):
     requests.post(url, headers=headers, json=data)
 
 if __name__ == "__main__":
-    weather = get_weather()
-    comment = ask_gemini(weather)
-    send_line(comment)
+    try:
+        weather = get_weather()
+        comment = ask_gemini(weather)
+        send_line(comment)
+    except Exception as e:
+        print(f"Error occurred: {e}")
+        # エラーが起きたらLINEに「何がダメか」を社長に報告するようにしました
+        send_line(f"【お散歩AIエラー通知】\n{e}")
+        raise e
