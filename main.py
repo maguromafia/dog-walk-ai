@@ -1,25 +1,22 @@
 import os
 import requests
-import google.generativeai as genai
+from google import genai
 
 # 設定（三浦市の座標）
 LAT = 35.1444
 LON = 139.6192
 
 def get_weather():
-    # One Call API 3.0を使用
     url = f"https://api.openweathermap.org/data/3.0/onecall?lat={LAT}&lon={LON}&exclude=minutely,daily,alerts&units=metric&lang=ja&appid={os.environ['WEATHER_API_KEY']}"
     response = requests.get(url)
     return response.json()
 
 def ask_gemini(weather_data):
-    genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    # 最新のGoogle GenAIクライアントを使用
+    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
     
-    # 24時間分のデータを抽出
     hourly_info = ""
     for h in weather_data['hourly'][:24]:
-        # 日本時間に変換
         time = f"{int(h['dt'] % 86400 / 3600 + 9) % 24}:00"
         hourly_info += f"{time}: {h['weather'][0]['description']}, 気温{h['temp']}℃\n"
 
@@ -30,14 +27,19 @@ def ask_gemini(weather_data):
     【散歩の判断基準】
     1. 基本は「朝（6-8時）」か「夕方（17-19時）」がメイン。
     2. もしどちらかに雨が降るなら、昼の隙間時間や、雨が降る前の午前中などを提案して。
-    3. 1日中雨なら「夜のうちに」や「明日はお家で遊ぼう」など、柔軟な提案。
+    3. 1日中雨なら「夜のうちに」や「明日はお家で遊ぼう」など。
     4. 夏場は地面の熱さ（肉球への配慮）も忘れずに。
     5. 優しく、ユーモアのある日本語で150文字程度。
     
     天気データ：
     {hourly_info}
     """
-    response = model.generate_content(prompt)
+    
+    # モデル名を最新の1.5-flashに指定（または最新の2.0-flash）
+    response = client.models.generate_content(
+        model="gemini-1.5-flash",
+        contents=prompt
+    )
     return response.text
 
 def send_line(text):
