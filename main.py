@@ -8,7 +8,6 @@ LON = 139.6192
 
 def get_weather():
     api_key = os.environ.get('WEATHER_API_KEY')
-    # 正しいURLに修正しました
     url = f"https://api.openweathermap.org/data/3.0/onecall?lat={LAT}&lon={LON}&exclude=minutely,daily,alerts&units=metric&lang=ja&appid={api_key}"
     response = requests.get(url)
     response.raise_for_status()
@@ -23,11 +22,11 @@ def ask_gemini(weather_data):
         time = f"{int(h['dt'] % 86400 / 3600 + 9) % 24}:00"
         hourly_info += f"{time}: {h['weather'][0]['description']}, 気温{h['temp']}℃\n"
 
-    prompt = f"三浦市の明日の天気です。愛犬の散歩アドバイスを150文字程度で作成してください:\n{hourly_info}"
+    prompt = f"三浦市の天気に基づき、愛犬の散歩アドバイスを150文字で作成して:\n{hourly_info}"
     
-    # 安定している gemini-2.0-flash を使用
+    # 【Workspace対策】最も制限が緩い「gemini-1.5-flash-latest」を指定
     response = client.models.generate_content(
-        model="gemini-2.0-flash", 
+        model="gemini-1.5-flash-latest", 
         contents=prompt
     )
     return response.text
@@ -50,5 +49,5 @@ if __name__ == "__main__":
         comment = ask_gemini(weather)
         send_line(comment)
     except Exception as e:
-        print(f"Error occurred: {e}")
+        print(f"Error: {e}")
         raise e
