@@ -2,8 +2,8 @@ name: Daily Dog Walk AI
 
 on:
   schedule:
-    - cron: '0 11 * * *' # 日本時間 20:00 に実行
-  workflow_dispatch: # 手動で動かすためのボタン
+    - cron: '0 8 * * *' # 日本時間 17:00
+  workflow_dispatch:
 
 jobs:
   build:
@@ -13,10 +13,10 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
+          python-version: '3.10' # 3.9から3.10へアップ
       - name: Install dependencies
         run: |
-          pip install requests google-generativeai
+          pip install requests google-genai # 最新のライブラリへ変更
       - name: Run AI
         env:
           WEATHER_API_KEY: ${{ secrets.WEATHER_API_KEY }}
